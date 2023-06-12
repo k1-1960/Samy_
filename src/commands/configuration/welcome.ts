@@ -83,10 +83,9 @@ export default command(meta, async ({ client, interaction }) => {
   });
 
   const mesage_data = await message?.fetch();
-  console.log(mesage_data);
 
   const collector = message.createMessageComponentCollector({
-    time: 60e3,
+    time: 180e3,
     filter: (i) =>
       i?.user?.id === interaction?.user?.id && i?.customId?.startsWith("modal"),
   });
@@ -218,7 +217,10 @@ export default command(meta, async ({ client, interaction }) => {
 
             if (udata && udata.configuration && udata.configuration.welcome) {
               let nv = int?.fields?.getTextInputValue("new_value") as string;
-              if (prop === "background" && !nv.startsWith("https://cdn.discordapp.com/attachments")) {
+              if (
+                prop === "background" &&
+                !nv.startsWith("https://cdn.discordapp.com/attachments")
+              ) {
                 int?.deferUpdate().then(() => {
                   int?.editReply({
                     content: `❌ | \`${prop}\` property could not be modified because the url did not start with \`https://cdn.discordapp.com/attachments\`, the image must be served by discord.`,
@@ -257,5 +259,17 @@ export default command(meta, async ({ client, interaction }) => {
           .catch(console.error);
       }
     }
+  });
+  collector.on("end", async () => {
+    let udata = await Guild.Model.findOne({
+      _id: interaction?.guild?.id,
+    });
+
+    message.edit({
+      components: [],
+      content:
+        "For performance reasons, the interactive components have been expired.\nIf you need another one, feel free to request it using the </welcomes:0> command again.",
+      embeds: [initialEmbed(udata)],
+    });
   });
 });

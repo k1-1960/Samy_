@@ -27,7 +27,11 @@ export default event("guildMemberAdd", async ({ log, client }, member) => {
       guildData?.configuration?.welcome?.background.length > 0
         ? guildData?.configuration?.welcome?.background
         : "https://i.imgur.com/0BF5QmT.jpg";
-
+    let content = guildData?.configuration?.welcome?.plain_message?.replace(
+      /{user}/g,
+      member.user.toString()
+    ) as string;
+    
     const imageURL = `https://api.munlai.me/image/welcomecard?image=${encodeURIComponent(
       member?.user?.displayAvatarURL({ extension: "png", size: 512 })
     )}&username=${encodeURIComponent(member.user.username)}&discriminator=${
@@ -42,18 +46,16 @@ export default event("guildMemberAdd", async ({ log, client }, member) => {
       });
       const attachment = new AttachmentBuilder(response.data);
 
-      let messageto: BaseMessageOptions = {
-        files: [attachment],
-      };
-
-      if (guildData?.configuration?.welcome?.plain_text?.length > 0)
-        messageto.content =
-          guildData?.configuration?.welcome?.plain_text?.replace(
-            /{user}/g,
-            member.user.toString()
-          );
-
-      channel?.send(messageto);
+      if (content?.length > 0) {
+        channel?.send({
+          files: [attachment],
+          content,
+        });
+      } else {
+        channel?.send({
+          files: [attachment],
+        });
+      }
     } catch (error) {
       console.error("Error fetching image:", error);
     }
