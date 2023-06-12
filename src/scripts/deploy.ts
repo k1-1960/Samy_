@@ -8,7 +8,15 @@ import commands from "../commands";
 import keys from "../keys";
 
 const body = commands
-  .map(({ commands }) => commands.map(({ meta }) => meta))
+  .map(({ commands }) => commands.filter(({ exclusive }) => exclusive === false).map(({ meta }) => meta))
+  .flat();
+
+const private_body = commands
+  .map(({ commands }) =>
+    commands
+      .filter(({ exclusive }) => exclusive === true)
+      .map(({ meta }) => meta)
+  )
   .flat();
 
 const rest = new REST({ version: "10" }).setToken(keys.clientToken);
@@ -16,17 +24,15 @@ const rest = new REST({ version: "10" }).setToken(keys.clientToken);
 async function main() {
   const currentUser = (await rest.get(Routes.user())) as APIUser;
 
-  const endpoint =
-    process.env.NODE_ENV === "production"
-      ? Routes.applicationCommands(currentUser.id)
-      : Routes.applicationGuildCommands(currentUser.id, keys.testGuild);
+  const endpoint = Routes.applicationCommands(currentUser.id);
+  const exclusive_endpoint = Routes.applicationGuildCommands(
+    currentUser.id,
+    keys.testGuild
+  );
 
-  const anti_endpoint =
-    process.env.NODE_ENV === "production"
-      ? Routes.applicationGuildCommands(currentUser.id, keys.testGuild)
-      : false;
-
-  anti_endpoint ? await rest.put(anti_endpoint, { body: [] }) : null;
+  exclusive_endpoint
+    ? await rest.put(exclusive_endpoint, { body: private_body })
+    : null;
   await rest.put(endpoint, { body });
 
   return currentUser;

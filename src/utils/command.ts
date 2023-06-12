@@ -4,19 +4,28 @@ import {
   CommandCategoryExtra,
   CommandExec,
   CommandMeta,
-} from '../types'
+} from "../types";
 
-export function command(meta: CommandMeta, exec: CommandExec): Command {
+export function command(
+  meta: CommandMeta,
+  exec: CommandExec,
+  exclusive: boolean = false
+): Command {
   return {
     meta,
     exec,
-  }
+    exclusive,
+  };
 }
 
-export function category(name: string, commands: Command[], extra: CommandCategoryExtra = {}): CommandCategory {
+export function category(
+  name: string,
+  commands: Command[],
+  extra: CommandCategoryExtra = {}
+): CommandCategory {
   return {
     name,
     commands,
     ...extra,
-  }
+  };
 }
