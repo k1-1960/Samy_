@@ -7,17 +7,22 @@ const Presets = {
       title: "",
       subtitle: "",
       background: "",
-      embedded: false
+      channel: "",
+      embedded: false,
+      enabled: false,
     },
     goodbyes: {
       plain_message: "",
       title: "",
       subtitle: "",
       background: "",
-      embedded: false
+      channel: "",
+      embedded: false,
+      enabled: false
     },
     invite_track: {
-      plain_message: "{invited} was invited by {inviter}. {inviter} now has {invitedCount} people invited."
+      plain_message:
+        "{invited} was invited by {inviter}. {inviter} now has {invitedCount} people invited.",
     },
   },
 

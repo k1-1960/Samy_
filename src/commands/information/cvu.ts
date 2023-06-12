@@ -7,11 +7,14 @@ const meta = new SlashCommandBuilder()
 
 export default command(meta, ({ interaction, client }) => {
   return interaction.reply({
-    ephemeral: true,
+    ephemeral: false,
     embeds: [{
       title: "Mercado pago cvu.",
       description: "0000003100060997419931",
-      color: 0x59a9ff
+      color: 0x59a9ff,
+      footer: {
+        text: "Una vez haya enviado el dinero envie el comprobante."
+      }
     }]
   })
 }); 

@@ -5,7 +5,9 @@ import {
   ActionRowBuilder,
   StringSelectMenuBuilder,
   ModalBuilder,
+  ChannelSelectMenuBuilder,
   TextInputBuilder,
+  ChannelSelectMenuInteraction,
 } from "discord.js";
 import { command } from "../../utils";
 import Guild from "../../models/guild";
@@ -15,11 +17,13 @@ const meta = new SlashCommandBuilder()
   .setDescription("Manage the welcome system.");
 
 export default command(meta, async ({ client, interaction }) => {
-  if (!interaction?.member?.permissions?.has("ManageGuild")) return interaction.reply({
-    content: "Unfortunately, you do not have sufficient permissions to perform this action.",
-    ephemeral: true
-  });
-  
+  if (!interaction?.memberPermissions?.has("ManageGuild"))
+    return interaction.reply({
+      content:
+        "Unfortunately, you do not have sufficient permissions to perform this action.",
+      ephemeral: true,
+    });
+
   let data = await Guild.Model.findOne({
     _id: interaction?.guild?.id,
   });
@@ -33,7 +37,8 @@ export default command(meta, async ({ client, interaction }) => {
         ([key, value]: [string, any]) => {
           return {
             name: key[0].toUpperCase() + key.replace("_", " ").slice(1),
-            value,
+            value:
+              key === "channel" && value?.length > 0 ? `<#${value}>` : value,
           };
         }
       ),
@@ -47,21 +52,34 @@ export default command(meta, async ({ client, interaction }) => {
       disabled: true,
     })
   );
+
   const Properties = new ActionRowBuilder<ButtonBuilder>().addComponents(
-    Object.entries(data?.configuration?.welcome).map(
-      ([key, value]: [string, any]) => {
+    Object.entries(data?.configuration?.welcome)
+      .slice(0, 5)
+      .map(([key, value]: [string, any]) => {
         return new ButtonBuilder({
           custom_id: `modal_${interaction?.guildId}_${key}`,
           label: key[0].toUpperCase() + key.replace("_", " ").slice(1),
           style: 2,
         });
-      }
-    )
+      })
+  );
+
+  const Properties2 = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    Object.entries(data?.configuration?.welcome)
+      .slice(5)
+      .map(([key, value]: [string, any]) => {
+        return new ButtonBuilder({
+          custom_id: `modal_${interaction?.guildId}_${key}`,
+          label: key[0].toUpperCase() + key.replace("_", " ").slice(1),
+          style: 2,
+        });
+      })
   );
 
   const message = await interaction.reply({
     embeds: [initialEmbed(data)],
-    components: [Tip.toJSON(), Properties.toJSON()],
+    components: [Tip.toJSON(), Properties.toJSON(), Properties2.toJSON()],
   });
 
   const mesage_data = await message?.fetch();
@@ -77,7 +95,95 @@ export default command(meta, async ({ client, interaction }) => {
     collector.resetTimer();
     if (i?.customId?.startsWith(`modal_${interaction?.guildId}`)) {
       let prop = i?.customId?.slice(`modal_${interaction?.guildId}_`.length);
-      if (prop === "embedded") {
+      if (prop === "embedded" || prop === "channel" || prop === "enabled") {
+        if (prop === "channel") {
+          let udata = await Guild.Model.findOne({
+            _id: interaction?.guild?.id,
+          });
+          let channelSelect =
+            new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(
+              new ChannelSelectMenuBuilder()
+                .addChannelTypes(0)
+                .setCustomId("channel")
+                .setPlaceholder("Select the channel for the welcomes.")
+            );
+
+          i.deferUpdate().then(async () => {
+            i.editReply({
+              embeds: [],
+              content: "Select the channel below.",
+              components: [channelSelect],
+            });
+
+            let channelCollector = message.createMessageComponentCollector({
+              filter: (int) => int?.user?.id === interaction?.user?.id,
+              time: 60e3,
+            });
+
+            channelCollector.on(
+              "collect",
+              async (int: ChannelSelectMenuInteraction) => {
+                if (int.customId !== "channel") return;
+                let channel = int.values[0];
+
+                if (
+                  udata &&
+                  udata.configuration &&
+                  udata.configuration.welcome
+                ) {
+                  udata.configuration.welcome[prop] = channel;
+
+                  await Guild.Model.findOneAndUpdate(
+                    {
+                      _id: interaction?.guildId,
+                    },
+                    Object(udata)
+                  );
+
+                  int.deferUpdate().then(() => {
+                    int.editReply({
+                      content: `✅ | \`${prop}\` property successfully changed.`,
+                      embeds: [initialEmbed(udata)],
+                      components: [
+                        Tip.toJSON(),
+                        Properties.toJSON(),
+                        Properties2.toJSON(),
+                      ],
+                    });
+                  });
+                }
+              }
+            );
+          });
+        } else {
+          let udata = await Guild.Model.findOne({
+            _id: interaction?.guild?.id,
+          });
+
+          if (udata && udata.configuration && udata.configuration.welcome) {
+            udata.configuration.welcome[prop] =
+              !udata.configuration.welcome[prop];
+
+            await Guild.Model.findOneAndUpdate(
+              {
+                _id: interaction?.guildId,
+              },
+              Object(udata)
+            );
+
+            i.deferUpdate().then(() => {
+              i?.editReply({
+                content: `✅ | \`${prop}\` property successfully changed.`,
+                embeds: [initialEmbed(udata)],
+                components: [
+                  Tip.toJSON(),
+                  Properties.toJSON(),
+                  Properties2.toJSON(),
+                ],
+              });
+            });
+          }
+        }
       } else {
         let modal_to_show = new ModalBuilder()
           .setTitle(`New value for ${prop}.`)
@@ -92,7 +198,7 @@ export default command(meta, async ({ client, interaction }) => {
                 .setPlaceholder(
                   `The actual value is ${
                     data?.configuration?.welcome[prop] || "Empty string."
-                  }`
+                  }`.slice(0, 95) + "..."
                 )
                 .setMinLength(4)
                 .setMaxLength(1024)
@@ -109,24 +215,44 @@ export default command(meta, async ({ client, interaction }) => {
             let udata = await Guild.Model.findOne({
               _id: interaction?.guild?.id,
             });
-            
-            if (udata && udata.configuration && udata.configuration.welcome) {
-  udata.configuration.welcome[prop] = int?.fields?.getTextInputValue("new_value");
 
-            await Guild.Model.findOneAndUpdate(
-              {
-                _id: interaction?.guildId,
-              },
-              Object(udata)
-            );
-}
-            int?.deferUpdate().then(() => {
-              int?.editReply({
-                content: `✅ | ${prop} successfully changed.`,
-                embeds: [initialEmbed(udata)],
-                components: [Tip.toJSON(), Properties.toJSON()],
-              });
-            });
+            if (udata && udata.configuration && udata.configuration.welcome) {
+              let nv = int?.fields?.getTextInputValue("new_value") as string;
+              if (prop === "background" && !nv.startsWith("https://cdn.discordapp.com/attachments")) {
+                int?.deferUpdate().then(() => {
+                  int?.editReply({
+                    content: `❌ | \`${prop}\` property could not be modified because the url did not start with \`https://cdn.discordapp.com/attachments\`, the image must be served by discord.`,
+                    embeds: [initialEmbed(udata)],
+                    components: [
+                      Tip.toJSON(),
+                      Properties.toJSON(),
+                      Properties2.toJSON(),
+                    ],
+                  });
+                });
+              } else {
+                udata.configuration.welcome[prop] = nv;
+
+                await Guild.Model.findOneAndUpdate(
+                  {
+                    _id: interaction?.guildId,
+                  },
+                  Object(udata)
+                );
+
+                int?.deferUpdate().then(() => {
+                  int?.editReply({
+                    content: `✅ | \`${prop}\` property successfully changed.`,
+                    embeds: [initialEmbed(udata)],
+                    components: [
+                      Tip.toJSON(),
+                      Properties.toJSON(),
+                      Properties2.toJSON(),
+                    ],
+                  });
+                });
+              }
+            }
           })
           .catch(console.error);
       }
