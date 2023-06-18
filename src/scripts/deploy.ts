@@ -7,15 +7,23 @@ import { REST, Routes, APIUser } from "discord.js";
 import commands from "../commands";
 import keys from "../keys";
 
-const body = commands
-  .map(({ commands }) => commands.filter(({ exclusive }) => exclusive === false).map(({ meta }) => meta))
-  .flat();
-
-const private_body = commands
+const publicCommands = commands
   .map(({ commands }) =>
     commands
-      .filter(({ exclusive }) => exclusive === true)
+      .filter(({ type }) => type === 0)
       .map(({ meta }) => meta)
+  )
+  .flat();
+
+const testCommands = commands
+  .map(({ commands }) =>
+    commands.filter(({ type }) => type === 1).map(({ meta }) => meta)
+  )
+  .flat();
+
+const privateCommands = commands
+  .map(({ commands }) =>
+    commands.filter(({ type }) => type === 2).map(({ meta }) => meta)
   )
   .flat();
 
@@ -24,16 +32,31 @@ const rest = new REST({ version: "10" }).setToken(keys.clientToken);
 async function main() {
   const currentUser = (await rest.get(Routes.user())) as APIUser;
 
-  const endpoint = Routes.applicationCommands(currentUser.id);
-  const exclusive_endpoint = Routes.applicationGuildCommands(
+  const public_endpoint = Routes.applicationCommands(currentUser.id);
+
+  const private_endpoint = Routes.applicationGuildCommands(
+    currentUser.id,
+    keys.privateGuild
+  );
+  const test_endpoint = Routes.applicationGuildCommands(
     currentUser.id,
     keys.testGuild
   );
 
-  exclusive_endpoint
-    ? await rest.put(exclusive_endpoint, { body: private_body })
+  console.log({
+    privateCommands,
+    publicCommands,
+    testCommands,
+  });
+
+  process.env.NODE_ENV === "production"
+    ? await rest.put(public_endpoint, { body: publicCommands })
     : null;
-  await rest.put(endpoint, { body });
+
+  test_endpoint ? await rest.put(test_endpoint, { body: testCommands }) : null;
+  private_endpoint
+    ? await rest.put(private_endpoint, { body: privateCommands })
+    : null;
 
   return currentUser;
 }

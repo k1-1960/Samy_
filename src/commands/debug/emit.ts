@@ -17,4 +17,4 @@ export default command(meta, ({ interaction, client }) => {
     ephemeral: true,
     content: "Event emitted.",
   });
-});
+}, 1);

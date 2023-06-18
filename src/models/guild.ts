@@ -18,18 +18,30 @@ const Presets = {
       background: "",
       channel: "",
       embedded: false,
-      enabled: false
+      enabled: false,
     },
     invite_track: {
       plain_message:
         "{invited} was invited by {inviter}. {inviter} now has {invitedCount} people invited.",
     },
+    anti_links: {
+      enabled: false,
+      excluded_roles: [],
+      excluded_channels: [],
+      allowed_domains: [],
+      informative_response: true,
+      custom_informative_response:
+        "Hey {user}, you can't send these types of links here.",
+      channels_can_lower_popularity: [],
+    },
   },
-
   economy: {
     shop: {
       items: [],
-      on_discount: 0, // 0 = false, > 0 = discount.
+      on_discount: {
+        discount: 0, // 0 → false, > 0 » discount.
+        ends_in: 0, // timestamp (unix).
+      },
     },
   },
 };
@@ -46,6 +58,7 @@ const Model = model(
       type: Object,
       default: Presets.economy,
     },
+    
   })
 );
 

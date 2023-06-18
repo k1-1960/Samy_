@@ -20,7 +20,7 @@ export type CommandMeta =
 export interface Command {
   meta: CommandMeta
   exec: CommandExec
-  exclusive?: boolean
+  type?: number
 }
 
 export interface CommandCategoryExtra {

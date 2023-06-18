@@ -9,12 +9,12 @@ import {
 export function command(
   meta: CommandMeta,
   exec: CommandExec,
-  exclusive: boolean = false
+  type: number = 0
 ): Command {
   return {
     meta,
     exec,
-    exclusive,
+    type,
   };
 }
 

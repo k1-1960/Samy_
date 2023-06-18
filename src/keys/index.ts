@@ -3,6 +3,7 @@ import "dotenv/config";
 
 const keys: Keys = {
   clientToken: process.env.CLIENT_TOKEN ?? "nil",
+  privateGuild: process.env.PRIVATE_GUILD ?? "nil",
   testGuild: process.env.TEST_GUILD ?? "nil",
   mongoDBKey: process.env.MONGODB_URI ?? "nil",
 };
